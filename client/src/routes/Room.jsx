@@ -10,12 +10,13 @@ const Room = (props) => {
   const otherUser = useRef();
   const userStream = useRef();
   let self;
+  let partner;
 
   useEffect(() => {
     navigator.mediaDevices.getUserMedia({audio: true, video: true}).then(stream => {
       userVideo.current.srcObject = stream;
       userStream.current = stream;
-      self = RecordRTC(userVideo.current.srcObject, {type: 'audio', mimeType: 'audio/webm'});
+      self = RecordRTC(userVideo.current.srcObject, {type: 'video', mimeType: 'video/webm'});
 
       socketRef.current = io.connect('/');
       socketRef.current.emit('join room', props.match.params.roomID);
@@ -120,15 +121,20 @@ const Room = (props) => {
 
   function handleTrackEvent(e) {
     partnerVideo.current.srcObject = e.streams[0];
+    partner = RecordRTC(partnerVideo.current.srcObject, {type: 'video', mimeType: 'video/webm'});
   };
 
-  function recordSelfAudio(e) {
+  function recordBoth(e) {
     self.startRecording();
+    partner.startRecording();
   }
 
   function stopRecording(e) {
     self.stopRecording(() => {
       self.save('self-recording.webm');
+    })
+    partner.stopRecording(() => {
+      partner.save('partner-recording.webm');
     })
   }
 
@@ -136,7 +142,7 @@ const Room = (props) => {
     <div>
       <video autoPlay muted ref={userVideo} />
       <video autoPlay ref={partnerVideo} />
-      <button onClick={(e) => recordSelfAudio(e)}>Record</button>
+      <button onClick={(e) => recordBoth(e)}>Record</button>
       <button onClick={(e) => stopRecording(e)}>Stop</button>
     </div>
   )
