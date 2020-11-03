@@ -1,6 +1,7 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import io from 'socket.io-client';
 import RecordRTC from 'recordrtc';
+import { VideoContainer, Video, ButtonContainer } from '../styles.js';
 
 const Room = (props) => {
   const userVideo = useRef();
@@ -9,14 +10,16 @@ const Room = (props) => {
   const socketRef = useRef();
   const otherUser = useRef();
   const userStream = useRef();
-  let self;
-  let partner;
+  const [self, setSelf] = useState();
+  const [partner, setPartner] = useState();
+
+  const [isRecording, setIsRecording] = useState('Record');
 
   useEffect(() => {
     navigator.mediaDevices.getUserMedia({audio: true, video: true}).then(stream => {
       userVideo.current.srcObject = stream;
       userStream.current = stream;
-      self = RecordRTC(userVideo.current.srcObject, {type: 'video', mimeType: 'video/webm'});
+      setSelf(RecordRTC(userVideo.current.srcObject, {type: 'video', mimeType: 'video/webm'}));
 
       socketRef.current = io.connect('/');
       socketRef.current.emit('join room', props.match.params.roomID);
@@ -121,29 +124,46 @@ const Room = (props) => {
 
   function handleTrackEvent(e) {
     partnerVideo.current.srcObject = e.streams[0];
-    partner = RecordRTC(partnerVideo.current.srcObject, {type: 'video', mimeType: 'video/webm'});
+    setPartner(RecordRTC(partnerVideo.current.srcObject, {type: 'video', mimeType: 'video/webm'}));
   };
 
-  function recordBoth(e) {
-    self.startRecording();
-    partner.startRecording();
+  function handleClick(e) {
+    if (isRecording === 'Record') {
+      recordBoth();
+    } else {
+      stopRecording();
+    }
   }
 
-  function stopRecording(e) {
+  function recordBoth() {
+    setIsRecording('Recording...')
+    self.startRecording();
+    partner.startRecording();
+    console.log('self', self);
+    console.log('partner', partner);
+  }
+
+  function stopRecording() {
+    console.log('self', self);
+    console.log('partner', partner);
     self.stopRecording(() => {
       self.save('self-recording.webm');
     })
     partner.stopRecording(() => {
       partner.save('partner-recording.webm');
-    })
+    });
+    setIsRecording('Record')
   }
 
   return (
     <div>
-      <video autoPlay muted ref={userVideo} />
-      <video autoPlay ref={partnerVideo} />
-      <button onClick={(e) => recordBoth(e)}>Record</button>
-      <button onClick={(e) => stopRecording(e)}>Stop</button>
+    <VideoContainer>
+      <Video autoPlay muted ref={userVideo} />
+      <Video autoPlay ref={partnerVideo} />
+    </VideoContainer>
+    <ButtonContainer>
+      <button onClick={(e) => handleClick(e)}>{isRecording}</button>
+    </ButtonContainer>
     </div>
   )
 
