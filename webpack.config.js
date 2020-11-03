@@ -6,6 +6,9 @@ module.exports = {
     path: path.join(__dirname, './client/dist'),
     filename: 'bundle.js',
   },
+  watchOptions: {
+    poll: 1000 // Check for changes every second
+  },
   module: {
     rules: [
       {

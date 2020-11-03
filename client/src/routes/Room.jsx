@@ -1,5 +1,6 @@
 import React, { useRef, useEffect } from 'react';
 import io from 'socket.io-client';
+import RecordRTC from 'recordrtc';
 
 const Room = (props) => {
   const userVideo = useRef();
@@ -8,11 +9,13 @@ const Room = (props) => {
   const socketRef = useRef();
   const otherUser = useRef();
   const userStream = useRef();
+  let self;
 
   useEffect(() => {
     navigator.mediaDevices.getUserMedia({audio: true, video: true}).then(stream => {
       userVideo.current.srcObject = stream;
       userStream.current = stream;
+      self = RecordRTC(userVideo.current.srcObject, {type: 'audio', mimeType: 'audio/webm'});
 
       socketRef.current = io.connect('/');
       socketRef.current.emit('join room', props.match.params.roomID);
@@ -119,10 +122,22 @@ const Room = (props) => {
     partnerVideo.current.srcObject = e.streams[0];
   };
 
+  function recordSelfAudio(e) {
+    self.startRecording();
+  }
+
+  function stopRecording(e) {
+    self.stopRecording(() => {
+      self.save('self-recording.webm');
+    })
+  }
+
   return (
     <div>
       <video autoPlay muted ref={userVideo} />
       <video autoPlay ref={partnerVideo} />
+      <button onClick={(e) => recordSelfAudio(e)}>Record</button>
+      <button onClick={(e) => stopRecording(e)}>Stop</button>
     </div>
   )
 
